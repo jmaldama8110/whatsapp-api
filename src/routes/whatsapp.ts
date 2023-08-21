@@ -8,6 +8,6 @@ whatsAppRouter.get('/whatsapp',
     VerifiedToken
 )
 
-whatsAppRouter.post('/whatapp',
+whatsAppRouter.post('/whatsapp',
     ReceiveMessage
 )
