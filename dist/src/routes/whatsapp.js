@@ -7,4 +7,5 @@ exports.whatsAppRouter = void 0;
 const express_1 = __importDefault(require("express"));
 const whatsapp_1 = require("../controllers/whatsapp");
 exports.whatsAppRouter = express_1.default.Router();
-exports.whatsAppRouter.get('/whatsapp', whatsapp_1.VerifiedToken);
+exports.whatsAppRouter.get('/', whatsapp_1.VerifiedToken);
+exports.whatsAppRouter.post('/', whatsapp_1.ReceiveMessage);
