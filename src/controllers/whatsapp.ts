@@ -1,4 +1,6 @@
 import  { Request, Response} from "express";
+import * as Nano from 'nano';
+let nano = Nano.default(`${process.env.COUCHDB_PROTOCOL}://${process.env.COUCHDB_USER}:${process.env.COUCHDB_PASS}@${process.env.COUCHDB_HOST}:${process.env.COUCHDB_PORT}`);
 
 export function VerifiedToken ( req:Request, res: Response ) {
 
@@ -20,6 +22,59 @@ export function VerifiedToken ( req:Request, res: Response ) {
     
 }
 
-export function ReceiveMessage (req: Request, res: Response) {
-    res.send({ message: "Hola, este es la funcion Receive Message"})
+type CouchDBDocumentType = "PERSON" | "MESSAGE";
+
+interface iPerson extends Nano.MaybeDocument {
+    name: string,
+    dob: string,
+    collection_name: CouchDBDocumentType
+}
+
+class Person implements iPerson {
+    _id: string | undefined
+    _rev: string | undefined
+    name: string
+    dob: string
+    messages: any[]
+    collection_name: CouchDBDocumentType
+  
+    constructor(name: string, dob: string, messages: any[], coll_name: CouchDBDocumentType ) {
+      this._id = undefined
+      this._rev = undefined
+      this.name = name
+      this.dob = dob
+      this.messages = messages;
+      this.collection_name = coll_name;
+    }
+  
+    processAPIResponse(response: Nano.DocumentInsertResponse) {
+      if (response.ok === true) {
+        this._id = response.id
+        this._rev = response.rev
+      }
+    }
+  }
+
+
+export async function ReceiveMessage (req: Request, res: Response) {
+
+    try {
+        const db = nano.use(process.env.COUCHDB_NAME!); 
+
+        const entry = req.body.entry[0];
+        const changes = entry.changes[0];
+        const value = changes.value;
+        const messageObject = value.messages;
+  
+        let p = new Person('Bob', '2015-02-04',messageObject, "MESSAGE",);
+
+        const resp = await db.insert(p);
+        p.processAPIResponse(resp);
+      
+        res.send("EVENT_RECEIVED")
+    }
+    catch(e){
+        console.log(e);
+        res.send("EVENT_RECEIVED");
+    }
 }
