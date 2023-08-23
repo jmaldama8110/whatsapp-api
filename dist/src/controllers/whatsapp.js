@@ -68,6 +68,22 @@ class Person {
         }
     }
 }
+function getMessageInfo(messageResp) {
+    if (!messageResp)
+        return undefined;
+    if (messageResp.length > 0) {
+        const itemWithMsg = messageResp.find((i) => i.type == 'text');
+        if (itemWithMsg)
+            return { type: 'text', value: itemWithMsg.text.body, id: '' };
+        const itemReplyButton = messageResp.find((i) => i.type == 'interactive');
+        if (itemReplyButton) {
+            if (itemReplyButton.interactive.type == 'button_reply') {
+                return { type: 'button_reply', value: itemReplyButton.interactive.button_reply.title, id: itemReplyButton.interactive.button_reply.id };
+            }
+        }
+    }
+    return undefined;
+}
 function ReceiveMessage(req, res) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
@@ -76,7 +92,8 @@ function ReceiveMessage(req, res) {
             const changes = entry.changes[0];
             const value = changes.value;
             const messageObject = value.messages;
-            let p = new Person('Bob', '2015-02-04', messageObject, "MESSAGE");
+            // console.log(getMessageInfo(messageObject) );
+            let p = new Person('Bob', '2015-02-04', req.body, "MESSAGE");
             const resp = yield db.insert(p);
             p.processAPIResponse(resp);
             res.send("EVENT_RECEIVED");

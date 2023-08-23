@@ -56,7 +56,32 @@ class Person implements iPerson {
   }
 
 
+function getMessageInfo( messageResp:any[]){
+ 
+
+    if( !messageResp ) return undefined;
+
+    if( messageResp.length > 0 ){
+
+        const itemWithMsg = messageResp.find( (i:any) => i.type == 'text' )
+        if( itemWithMsg )
+         return { type: 'text', value: itemWithMsg.text.body, id: '' }
+
+        const itemReplyButton = messageResp.find( (i:any) => i.type == 'interactive')
+        if( itemReplyButton ){
+            if(itemReplyButton.interactive.type == 'button_reply'){
+                return { type: 'button_reply', value: itemReplyButton.interactive.button_reply.title, id: itemReplyButton.interactive.button_reply.id}
+            }
+        }
+    }
+
+
+    return undefined;
+}
+
 export async function ReceiveMessage (req: Request, res: Response) {
+    
+
 
     try {
         const db = nano.use(process.env.COUCHDB_NAME!); 
@@ -65,11 +90,15 @@ export async function ReceiveMessage (req: Request, res: Response) {
         const changes = entry.changes[0];
         const value = changes.value;
         const messageObject = value.messages;
+        
+        // console.log(getMessageInfo(messageObject) );
+
   
-        let p = new Person('Bob', '2015-02-04',messageObject, "MESSAGE",);
+        let p = new Person('Bob', '2015-02-04',req.body, "MESSAGE",);
 
         const resp = await db.insert(p);
         p.processAPIResponse(resp);
+        
       
         res.send("EVENT_RECEIVED")
     }
