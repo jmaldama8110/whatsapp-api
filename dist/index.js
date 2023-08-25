@@ -10,5 +10,5 @@ const port = process.env.PORT || 3001;
 app.use(express_1.default.json());
 app.use(whatsapp_1.whatsAppRouter);
 app.listen(port, () => {
-    console.log(`⚡️[server]: Server is running at port:${port}`);
+    console.log(`⚡️[server]: Server is running at port:${port} `);
 });

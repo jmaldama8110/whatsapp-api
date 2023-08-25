@@ -32,8 +32,9 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ReceiveMessage = exports.VerifiedToken = void 0;
+exports.SendTextMessage = exports.ReceiveMessage = exports.VerifiedToken = void 0;
 const Nano = __importStar(require("nano"));
+const whatsappService_1 = require("../services/whatsappService");
 let nano = Nano.default(`${process.env.COUCHDB_PROTOCOL}://${process.env.COUCHDB_USER}:${process.env.COUCHDB_PASS}@${process.env.COUCHDB_HOST}:${process.env.COUCHDB_PORT}`);
 function VerifiedToken(req, res) {
     try {
@@ -52,33 +53,36 @@ function VerifiedToken(req, res) {
     }
 }
 exports.VerifiedToken = VerifiedToken;
-class Person {
-    constructor(name, dob, messages, coll_name) {
-        this._id = undefined;
-        this._rev = undefined;
-        this.name = name;
-        this.dob = dob;
-        this.messages = messages;
-        this.collection_name = coll_name;
-    }
-    processAPIResponse(response) {
-        if (response.ok === true) {
-            this._id = response.id;
-            this._rev = response.rev;
-        }
-    }
-}
-function getMessageInfo(messageResp) {
+function getMessageInfo(reqBody) {
+    const entry = reqBody.entry[0];
+    const changes = entry.changes[0];
+    const value = changes.value;
+    const contact = value.contacts[0];
+    const messageResp = value.messages;
     if (!messageResp)
         return undefined;
     if (messageResp.length > 0) {
         const itemWithMsg = messageResp.find((i) => i.type == 'text');
         if (itemWithMsg)
-            return { type: 'text', value: itemWithMsg.text.body, id: '' };
+            return {
+                profile_name: contact.profile.name,
+                phone_number: messageResp[0].from,
+                type: 'text',
+                value: itemWithMsg.text.body,
+                response_id: '',
+                hashTagStarter: itemWithMsg.text.body[0] == '#'
+            };
         const itemReplyButton = messageResp.find((i) => i.type == 'interactive');
         if (itemReplyButton) {
             if (itemReplyButton.interactive.type == 'button_reply') {
-                return { type: 'button_reply', value: itemReplyButton.interactive.button_reply.title, id: itemReplyButton.interactive.button_reply.id };
+                return {
+                    profile_name: contact.profile.name,
+                    phone_number: messageResp[0].from,
+                    type: 'button_reply',
+                    value: itemReplyButton.interactive.button_reply.title,
+                    response_id: itemReplyButton.interactive.button_reply.id,
+                    hashTagStarter: false
+                };
             }
         }
     }
@@ -88,14 +92,55 @@ function ReceiveMessage(req, res) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const db = nano.use(process.env.COUCHDB_NAME);
-            const entry = req.body.entry[0];
-            const changes = entry.changes[0];
-            const value = changes.value;
-            const messageObject = value.messages;
-            // console.log(getMessageInfo(messageObject) );
-            let p = new Person('Bob', '2015-02-04', req.body, "MESSAGE");
-            const resp = yield db.insert(p);
-            p.processAPIResponse(resp);
+            const welcomeMsg = yield db.get('config');
+            yield (0, whatsappService_1.sendMessage)(welcomeMsg.welcome_message);
+            /**
+             * 1) Determine User Message Type
+             * -> Start a conversacion using keywords
+             * -> Response to a form question
+             *
+             *
+             * 2) Determine Bot response
+             * -> Overall menu (when no conversation started)
+             * -> One of N question (based on conversation history)
+             * ->
+             */
+            /**Necesitamos saber si este usuario ya tiene una conversacion iniciada
+             *
+             * Si la conversacion ya esta iniciada, necesitamos saber en donde se quedo
+             * Una conversacion debe guardarse solo una vez al detectar el #holaclau
+             * Una vez guardada, las siguientes veces que usuario introduce un #holaclau simplemente
+             * el robor respondera con la ultima pregunta en la que se quedo
+            */
+            // const messageInfo = getMessageInfo ( req.body );
+            // if( !!messageInfo ){
+            //     /** search the Questionnaire by the #keyword */
+            //     if( messageInfo.hashTagStarter ){
+            //         const searchFormId = messageInfo.value?.slice(1);
+            //         if( !!searchFormId ){ // search keyword not empty
+            //             try {
+            //                 // Questionnaire exist!
+            //                 const formInfo = await db.get(searchFormId!);
+            //                 /** Check if conversation already exist  */
+            //                 const conversationId = `${searchFormId}|${messageInfo.phone_number}`
+            //                 try{
+            //                     await db.get(conversationId);
+            //                     /** If exist, Must continue with the fillup */
+            //                 }
+            //                 catch(e){
+            //                     /** When does not exist, must create it and start filling up */
+            //                     const conversationDoc = new Conversation(conversationId);
+            //                     /** Based on the Form, build the replay data array */
+            //                     await db.insert(conversationDoc);
+            //                 }
+            //             }   
+            //             catch(e){
+            //                 // Questionnaire does not exist
+            //                 console.log('Form does not exist')
+            //             }
+            //         }
+            //     }
+            // }
             res.send("EVENT_RECEIVED");
         }
         catch (e) {
@@ -105,3 +150,16 @@ function ReceiveMessage(req, res) {
     });
 }
 exports.ReceiveMessage = ReceiveMessage;
+function SendTextMessage(req, res) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            yield (0, whatsappService_1.sendMessage)(req.body.text);
+            res.send('Ok');
+        }
+        catch (e) {
+            console.log(e);
+            res.status(400).send(e);
+        }
+    });
+}
+exports.SendTextMessage = SendTextMessage;

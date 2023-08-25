@@ -20,12 +20,14 @@
   },
   "homepage": "https://github.com/jmaldama8110/whatsapp-api#readme",
   "dependencies": {
+    "axios": "^1.4.0",
     "dotenv": "^16.3.1",
     "env-cmd": "^10.1.0",
     "express": "^4.18.2",
     "nano": "^10.1.2"
   },
   "devDependencies": {
+    "@types/axios": "^0.14.0",
     "@types/express": "^4.17.17",
     "@types/nano": "^7.0.0",
     "@types/node": "^20.5.1",
