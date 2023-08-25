@@ -82,10 +82,22 @@ export async function ReceiveMessage (req: Request, res: Response) {
     
     try {
 
-        const db = nano.use(process.env.COUCHDB_NAME!); 
+        
+        const messageInfo = getMessageInfo ( req.body );
+        
+        if( !!messageInfo ){
 
-        const welcomeMsg:ConfigDocument =  await db.get('config');
-        await sendMessage(welcomeMsg.welcome_message!);
+            if( messageInfo.type == 'text' ){
+
+                const db = nano.use(process.env.COUCHDB_NAME!); 
+                const welcomeMsg:ConfigDocument =  await db.get('config');
+                await sendMessage(welcomeMsg.welcome_message!);
+    
+            }
+
+        }
+
+        
 
         /**
          * 1) Determine User Message Type
