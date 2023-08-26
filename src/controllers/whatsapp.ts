@@ -36,44 +36,46 @@ export function VerifiedToken ( req:Request, res: Response ) {
 }
 
 function getMessageInfo ( reqBody: any) : (iMessageBodyFromUser | undefined)  {
+
+    try {
+        const entry = reqBody.entry[0];
+        const changes = entry.changes[0];
+        const value = changes.value;
+        const contact = value.contacts[0];
+        const messageResp = value.messages;
     
-    const entry = reqBody.entry[0];
-    const changes = entry.changes[0];
-    const value = changes.value;
-    const contact = value.contacts[0];
-    const messageResp = value.messages;
+        if( !messageResp ) return undefined;
 
+        if( messageResp.length > 0 ){
+            const itemWithMsg = messageResp.find( (i:any) => i.type == 'text' )
+            if( itemWithMsg )
+            return {   
+                profile_name: contact.profile.name,
+                phone_number: messageResp[0].from,
+                type: 'text',
+                value: itemWithMsg.text.body,
+                response_id: '',
+                hashTagStarter: itemWithMsg.text.body[0] == '#'
+            }
 
-    if( !messageResp ) return undefined;
-
-    if( messageResp.length > 0 ){
-        const itemWithMsg = messageResp.find( (i:any) => i.type == 'text' )
-        if( itemWithMsg )
-         return {   
-            profile_name: contact.profile.name,
-            phone_number: messageResp[0].from,
-            type: 'text',
-            value: itemWithMsg.text.body,
-            response_id: '',
-            hashTagStarter: itemWithMsg.text.body[0] == '#'
-        }
-
-        const itemReplyButton = messageResp.find( (i:any) => i.type == 'interactive')
-        if( itemReplyButton ){
-            if(itemReplyButton.interactive.type == 'button_reply'){
-                return { 
-                    profile_name: contact.profile.name,
-                    phone_number: messageResp[0].from,
-                    type: 'button_reply',
-                    value: itemReplyButton.interactive.button_reply.title,
-                    response_id: itemReplyButton.interactive.button_reply.id,
-                    hashTagStarter: false 
+            const itemReplyButton = messageResp.find( (i:any) => i.type == 'interactive')
+            if( itemReplyButton ){
+                if(itemReplyButton.interactive.type == 'button_reply'){
+                    return { 
+                        profile_name: contact.profile.name,
+                        phone_number: messageResp[0].from,
+                        type: 'button_reply',
+                        value: itemReplyButton.interactive.button_reply.title,
+                        response_id: itemReplyButton.interactive.button_reply.id,
+                        hashTagStarter: false 
+                    }
                 }
             }
         }
     }
-
-    return undefined;
+    catch(e){
+        return undefined;
+    }
 }
 
 
