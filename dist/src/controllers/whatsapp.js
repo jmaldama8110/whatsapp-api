@@ -35,6 +35,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.SendTextMessage = exports.ReceiveMessage = exports.VerifiedToken = void 0;
 const Nano = __importStar(require("nano"));
 const whatsappService_1 = require("../services/whatsappService");
+const Form_1 = require("../model/Form");
 let nano = Nano.default(`${process.env.COUCHDB_PROTOCOL}://${process.env.COUCHDB_USER}:${process.env.COUCHDB_PASS}@${process.env.COUCHDB_HOST}:${process.env.COUCHDB_PORT}`);
 function VerifiedToken(req, res) {
     try {
@@ -42,7 +43,7 @@ function VerifiedToken(req, res) {
         const token = req.query["hub.verify_token"];
         const challenge = req.query["hub.challenge"];
         if (!challenge || !token || token != accessToken) {
-            throw new Error('Invalid query params...');
+            throw new Error("Invalid query params...");
         }
         else {
             res.send(challenge);
@@ -54,93 +55,150 @@ function VerifiedToken(req, res) {
 }
 exports.VerifiedToken = VerifiedToken;
 function getMessageInfo(reqBody) {
-    const entry = reqBody.entry[0];
-    const changes = entry.changes[0];
-    const value = changes.value;
-    const contact = value.contacts[0];
-    const messageResp = value.messages;
-    if (!messageResp)
-        return undefined;
-    if (messageResp.length > 0) {
-        const itemWithMsg = messageResp.find((i) => i.type == 'text');
-        if (itemWithMsg)
-            return {
-                profile_name: contact.profile.name,
-                phone_number: messageResp[0].from,
-                type: 'text',
-                value: itemWithMsg.text.body,
-                response_id: '',
-                hashTagStarter: itemWithMsg.text.body[0] == '#'
-            };
-        const itemReplyButton = messageResp.find((i) => i.type == 'interactive');
-        if (itemReplyButton) {
-            if (itemReplyButton.interactive.type == 'button_reply') {
+    try {
+        const entry = reqBody.entry[0];
+        const changes = entry.changes[0];
+        const value = changes.value;
+        const contact = value.contacts[0];
+        const messageResp = value.messages;
+        if (!messageResp)
+            return undefined;
+        if (messageResp.length > 0) {
+            const itemWithMsg = messageResp.find((i) => i.type == "text");
+            if (itemWithMsg)
                 return {
                     profile_name: contact.profile.name,
                     phone_number: messageResp[0].from,
-                    type: 'button_reply',
-                    value: itemReplyButton.interactive.button_reply.title,
-                    response_id: itemReplyButton.interactive.button_reply.id,
-                    hashTagStarter: false
+                    type: "text",
+                    value: itemWithMsg.text.body,
+                    response_id: "",
+                    hashTagStarter: itemWithMsg.text.body[0] == "#",
                 };
+            const itemReplyButton = messageResp.find((i) => i.type == "interactive");
+            if (itemReplyButton) {
+                if (itemReplyButton.interactive.type == "button_reply") {
+                    return {
+                        profile_name: contact.profile.name,
+                        phone_number: messageResp[0].from,
+                        type: "button_reply",
+                        value: itemReplyButton.interactive.button_reply.title,
+                        response_id: itemReplyButton.interactive.button_reply.id,
+                        hashTagStarter: false,
+                    };
+                }
             }
         }
     }
-    return undefined;
+    catch (e) {
+        return undefined;
+    }
 }
-function ReceiveMessage(req, res) {
+function getCreateConversation(conversationId) {
+    return __awaiter(this, void 0, void 0, function* () {
+        const db = nano.use(process.env.COUCHDB_NAME);
+        const splitId = conversationId.split("|"); // split[0]: formId, split[1]:phoneNumber
+        try {
+            // Questionnaire exist!
+            if (!(splitId.length > 0))
+                throw new Error();
+            const respFind = yield db.get(splitId[0]);
+            const newForm = Form_1.Form.populateForm(respFind);
+            // Extracts list of questions from Form and post it at thew new record
+            const repliesNew = newForm.questions.map((i) => ({
+                order: i.order,
+                question_title: i.question_title,
+                type: i.type,
+                reply: {
+                    text: '',
+                    id: ''
+                }
+            }));
+            try {
+                return yield db.get(conversationId);
+            }
+            catch (e) {
+                /** When does not exist, must create it and start filling up */
+                const conversationDoc = new Form_1.Conversation(conversationId, repliesNew);
+                const resp = yield db.insert(conversationDoc);
+                //// this parts adds the flag for what conversation is active
+                yield db.insert({
+                    _id: splitId[1],
+                    collection_name: "CONTACT",
+                    forms: [{ id: splitId[0], active: true }]
+                });
+                conversationDoc.processNewConversationResponse(resp);
+                return conversationDoc;
+            }
+        }
+        catch (e) {
+            // Questionnaire does not exist
+            return undefined;
+        }
+    });
+}
+function getWelcomeMessage() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const db = nano.use(process.env.COUCHDB_NAME);
-            const welcomeMsg = yield db.get('config');
-            yield (0, whatsappService_1.sendMessage)(welcomeMsg.welcome_message);
-            /**
-             * 1) Determine User Message Type
-             * -> Start a conversacion using keywords
-             * -> Response to a form question
-             *
-             *
-             * 2) Determine Bot response
-             * -> Overall menu (when no conversation started)
-             * -> One of N question (based on conversation history)
-             * ->
-             */
-            /**Necesitamos saber si este usuario ya tiene una conversacion iniciada
-             *
-             * Si la conversacion ya esta iniciada, necesitamos saber en donde se quedo
-             * Una conversacion debe guardarse solo una vez al detectar el #holaclau
-             * Una vez guardada, las siguientes veces que usuario introduce un #holaclau simplemente
-             * el robor respondera con la ultima pregunta en la que se quedo
-            */
-            // const messageInfo = getMessageInfo ( req.body );
-            // if( !!messageInfo ){
-            //     /** search the Questionnaire by the #keyword */
-            //     if( messageInfo.hashTagStarter ){
-            //         const searchFormId = messageInfo.value?.slice(1);
-            //         if( !!searchFormId ){ // search keyword not empty
-            //             try {
-            //                 // Questionnaire exist!
-            //                 const formInfo = await db.get(searchFormId!);
-            //                 /** Check if conversation already exist  */
-            //                 const conversationId = `${searchFormId}|${messageInfo.phone_number}`
-            //                 try{
-            //                     await db.get(conversationId);
-            //                     /** If exist, Must continue with the fillup */
-            //                 }
-            //                 catch(e){
-            //                     /** When does not exist, must create it and start filling up */
-            //                     const conversationDoc = new Conversation(conversationId);
-            //                     /** Based on the Form, build the replay data array */
-            //                     await db.insert(conversationDoc);
-            //                 }
-            //             }   
-            //             catch(e){
-            //                 // Questionnaire does not exist
-            //                 console.log('Form does not exist')
-            //             }
-            //         }
-            //     }
-            // }
+            const configDoc = yield db.get('config');
+            return configDoc.welcome_message;
+        }
+        catch (e) {
+            return undefined;
+        }
+    });
+}
+function checkActiveConversation(phoneNumber) {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (!phoneNumber)
+            return undefined;
+        try {
+            /// check if the user has an started conversation
+            const db = nano.use(process.env.COUCHDB_NAME);
+            const conversationsData = yield db.get(phoneNumber);
+            const activeConversation = conversationsData.forms.find((i) => (i.active));
+            if (!activeConversation)
+                return undefined;
+            return `${activeConversation.id}|${phoneNumber}`;
+        }
+        catch (e) {
+            return undefined;
+        }
+    });
+}
+function ReceiveMessage(req, res) {
+    var _a;
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const messageInfo = getMessageInfo(req.body);
+            if (!!messageInfo) {
+                const conversationId = yield checkActiveConversation(messageInfo.phone_number);
+                if (messageInfo.type == 'text' && !messageInfo.hashTagStarter) {
+                    console.log("User: ", messageInfo.value);
+                    if (conversationId) {
+                        // here save the response message and increment progress flag on conversation document
+                        /// Since user has started a Conversation, bot sends question
+                        const conversationDoc = yield getCreateConversation(conversationId);
+                        console.log("Bot: ", conversationDoc === null || conversationDoc === void 0 ? void 0 : conversationDoc.replies[conversationDoc.progress].question_title);
+                    }
+                    else {
+                        // User send a message to the bot, but hast not started a conversation
+                        const welcomeMsg = yield getWelcomeMessage();
+                        console.log("Bot: ", welcomeMsg);
+                    }
+                }
+                if (messageInfo.hashTagStarter && !conversationId) {
+                    // When user enter #, searchs for a conversation, if does not exist it creates it.
+                    // returns undefined when #form does not exist
+                    const newConversationId = `${(_a = messageInfo.value) === null || _a === void 0 ? void 0 : _a.slice(1)}|${messageInfo.phone_number}`;
+                    console.log(newConversationId);
+                    const conversationDoc = yield getCreateConversation(newConversationId);
+                    if (conversationDoc) {
+                        console.log("User:", messageInfo.value);
+                        console.log("Bot:", conversationDoc === null || conversationDoc === void 0 ? void 0 : conversationDoc.replies[conversationDoc.progress].question_title);
+                    }
+                }
+            }
             res.send("EVENT_RECEIVED");
         }
         catch (e) {
@@ -154,7 +212,7 @@ function SendTextMessage(req, res) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             yield (0, whatsappService_1.sendMessage)(req.body.text);
-            res.send('Ok');
+            res.send("Ok");
         }
         catch (e) {
             console.log(e);

@@ -4,14 +4,19 @@ type DocumentCollectionType = "FORM" | "CONVERSATION";
 type QuestionnaireStatus = "Active" | "Inactive";
 type QuestionType = "free" | "button_reply"
 
-interface iQuestionElement {
+export interface iQuestionElement {
     order: number;
     question_title: string;
     type: QuestionType
 }
+export interface iReplyElement extends iQuestionElement {
+  reply: {
+    text: string;
+    id: string;
+  }
+}
 
-
-interface iQuestionnaire extends Nano.MaybeDocument {
+interface iForm extends Nano.MaybeDocument {
     title: string,
     goodbye_message: string,
     collection_name: DocumentCollectionType,
@@ -19,60 +24,87 @@ interface iQuestionnaire extends Nano.MaybeDocument {
     status: QuestionnaireStatus
 }
 
-export class Questionnaire implements iQuestionnaire {
+export class Form implements iForm {
     _id: string | undefined
     _rev: string | undefined
+
     title: string
     goodbye_message: string
     collection_name: DocumentCollectionType
     questions: iQuestionElement[]
     status: QuestionnaireStatus
 
-    constructor(coll_name: DocumentCollectionType ) {
+    constructor() {
       this._id = undefined
       this._rev = undefined
-      this.collection_name = coll_name;
+      this.collection_name = "FORM";
       this.title = ''
       this.goodbye_message = ''
       this.questions = []
       this.status = 'Active'
     }
   
-    processAPIResponse(response: Nano.DocumentInsertResponse) {
-      if (response.ok === true) {
-        this._id = response.id
-        this._rev = response.rev
-      }
+    static populateForm( response: Form ){
+
+      const data = new Form();
+      data._id = response._id;
+      data._rev = response._rev;
+      data.title = response.title;
+      data.goodbye_message = response.goodbye_message;
+      data.questions = response.questions;
+      data.status = response.status;
+      return data;
     }
+    
   }
 
   type ConversationStatusType = "Started" | "Pending" | "Done"
-
 
   interface iConversation extends Nano.MaybeDocument {
     started_at: string;  // timestamp  
     status: ConversationStatusType,
     progress: number,
-    replies: any[]
+    replies: iReplyElement[]
     collection_name: DocumentCollectionType;
   }
 
   export class Conversation implements iConversation {
     _id: string | undefined;
     _rev: string | undefined;
+
     started_at: string;
-    progress: number;
-    replies: any[];
     status: ConversationStatusType
+    progress: number;
+    replies: iReplyElement[];
     collection_name: DocumentCollectionType;
 
-    constructor( id: string){
+    constructor( id:string, replies: iReplyElement[]){
         this._id = id;
         this._rev = undefined;
         this.started_at = Date.now().toString();
-        this.replies = []
+        this.replies = replies
         this.status = "Started"
         this.progress = 0
         this.collection_name = "CONVERSATION"
-    }   
+    }
+
+    processNewConversationResponse( response: Nano.DocumentInsertResponse){
+      
+      if( response.ok){
+        this._id = response.id;
+        this._rev = response.rev;
+      }
+      
+    }
+
+    static populateConversation( response: Conversation){
+        const newData = new Conversation('',[]);
+        newData._id = response._id;
+        newData._rev = response._rev;
+        newData.started_at = response.started_at;
+        newData.status = response.status;
+        newData.progress = response.progress;
+        newData.replies = response.replies;
+        return newData;
+    }
   }
