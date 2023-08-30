@@ -22,7 +22,7 @@ export async function sendMessage( textMsg: string, phoneNumber: string ){
     const waApiRes = await api.post(url, {
         "messaging_product": "whatsapp",    
         "recipient_type": "individual",
-        "to": phoneNumber,
+        "to": '529612338665',
         "type": "text",
         "text": {
             "preview_url": false,

@@ -15,6 +15,7 @@ interface iMessageBodyFromUser {
   type: string;
   value: string | undefined;
   hashTagStarter: boolean;
+  contact?: any;
 }
 
 export function VerifiedToken(req: Request, res: Response) {
@@ -45,7 +46,6 @@ function getMessageInfo(reqBody: any): iMessageBodyFromUser | undefined {
 
     if (messageResp.length > 0) {
       const itemWithMsg = messageResp.find((i: any) => i.type == "text");
-      
       if (itemWithMsg)
         return {
           profile_name: contact.profile.name,
@@ -54,6 +54,7 @@ function getMessageInfo(reqBody: any): iMessageBodyFromUser | undefined {
           value: itemWithMsg.text.body,
           response_id: "",
           hashTagStarter: itemWithMsg.text.body[0] == "#",
+          contact: contact
         };
 
       const itemReplyButton = messageResp.find(
@@ -68,6 +69,7 @@ function getMessageInfo(reqBody: any): iMessageBodyFromUser | undefined {
             value: itemReplyButton.interactive.button_reply.title,
             response_id: itemReplyButton.interactive.button_reply.id,
             hashTagStarter: false,
+            contact: contact
           };
         }
       }
@@ -170,7 +172,7 @@ export async function ReceiveMessage(req: any, res: Response) {
 
     if (!!messageInfo) {
       
-      
+      console.log(messageInfo);
       const conversationId = await checkActiveConversation(messageInfo.phone_number);
 
       if( messageInfo.type == 'text' && !messageInfo.hashTagStarter ){
