@@ -45,7 +45,7 @@ function getMessageInfo(reqBody: any): iMessageBodyFromUser | undefined {
 
     if (messageResp.length > 0) {
       const itemWithMsg = messageResp.find((i: any) => i.type == "text");
-      console.log(messageResp[0]);
+      
       if (itemWithMsg)
         return {
           profile_name: contact.profile.name,
@@ -201,11 +201,11 @@ export async function ReceiveMessage(req: any, res: Response) {
 
               if ( conversationDoc.replies.length > (conversationDoc.progress + 1) )
               {
-                sendMessage(conversationDoc.replies[conversationDoc.progress + 1].question_title, )
+                sendMessage(conversationDoc.replies[conversationDoc.progress + 1].question_title, messageInfo.phone_number )
                 // console.log("Bot: ",conversationDoc.replies[conversationDoc.progress + 1].question_title);
               } else {
                 // console.log("Bot: El formulario ha terminado, muchas gracias por tus respuestas! Hasta luego");
-                sendMessage("El formulario ha terminado, muchas gracias por tus respuestas! Hasta luego");
+                sendMessage("El formulario ha terminado, muchas gracias por tus respuestas! Hasta luego",messageInfo.phone_number);
               }
               
               
@@ -216,7 +216,7 @@ export async function ReceiveMessage(req: any, res: Response) {
           // User send a message to the bot, but hast not started a conversation
           const welcomeMsg = await getWelcomeMessage();
           // console.log("Bot: ",welcomeMsg);
-          sendMessage(welcomeMsg)
+          sendMessage(welcomeMsg, messageInfo.phone_number)
         }
       }
 
@@ -229,7 +229,7 @@ export async function ReceiveMessage(req: any, res: Response) {
         if( conversationDoc){
           // console.log("User:" , messageInfo.value);
           // console.log("Bot:", conversationDoc.replies[conversationDoc.progress+1].question_title)
-          sendMessage(conversationDoc.replies[conversationDoc.progress+1].question_title)
+          sendMessage(conversationDoc.replies[conversationDoc.progress+1].question_title, messageInfo.phone_number)
         }
 
       }
@@ -243,12 +243,4 @@ export async function ReceiveMessage(req: any, res: Response) {
   }
 }
 
-export async function SendTextMessage(req: Request, res: Response) {
-  try {
-    await sendMessage(req.body.text);
-    res.send("Ok");
-  } catch (e) {
-    console.log(e);
-    res.status(400).send(e);
-  }
-}
+

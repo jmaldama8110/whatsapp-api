@@ -2,7 +2,7 @@
 import axios from "axios";
 
 
-export async function sendMessage( textMsg: string ){
+export async function sendMessage( textMsg: string, phoneNumber: string ){
 
     const waApiVersion = process.env.WHATSAPP_API_VERSION;
     const waPhoneNumberId = process.env.WHATSAPP_API_PHONE_NUMBER_ID;
@@ -22,7 +22,7 @@ export async function sendMessage( textMsg: string ){
     const waApiRes = await api.post(url, {
         "messaging_product": "whatsapp",    
         "recipient_type": "individual",
-        "to": "529612338665",
+        "to": phoneNumber,
         "type": "text",
         "text": {
             "preview_url": false,
