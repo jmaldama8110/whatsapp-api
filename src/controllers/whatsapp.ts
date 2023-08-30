@@ -45,7 +45,7 @@ function getMessageInfo(reqBody: any): iMessageBodyFromUser | undefined {
 
     if (messageResp.length > 0) {
       const itemWithMsg = messageResp.find((i: any) => i.type == "text");
-      console.log(entry[0]);
+      console.log(entry);
       if (itemWithMsg)
         return {
           profile_name: contact.profile.name,
