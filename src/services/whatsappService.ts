@@ -18,11 +18,17 @@ export async function sendMessage( textMsg: string, phoneNumber: string ){
               Authorization: `Bearer ${waToken}`,
             },
           });
-      
+    
+    const country = phoneNumber.slice(0,2);
+    let mexFormat = phoneNumber; 
+    if( country == '52'){ // only mexico phone Numbers
+        if( phoneNumber.length == 13)
+                mexFormat = `${52}${phoneNumber.slice(-10)}`
+    }
     const waApiRes = await api.post(url, {
         "messaging_product": "whatsapp",    
         "recipient_type": "individual",
-        "to": '529612338665',
+        "to": country == '52' ? mexFormat : phoneNumber,
         "type": "text",
         "text": {
             "preview_url": false,

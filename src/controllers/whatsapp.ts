@@ -15,7 +15,7 @@ interface iMessageBodyFromUser {
   type: string;
   value: string | undefined;
   hashTagStarter: boolean;
-  contact?: any;
+
 }
 
 export function VerifiedToken(req: Request, res: Response) {
@@ -54,7 +54,6 @@ function getMessageInfo(reqBody: any): iMessageBodyFromUser | undefined {
           value: itemWithMsg.text.body,
           response_id: "",
           hashTagStarter: itemWithMsg.text.body[0] == "#",
-          contact: contact
         };
 
       const itemReplyButton = messageResp.find(
@@ -69,7 +68,6 @@ function getMessageInfo(reqBody: any): iMessageBodyFromUser | undefined {
             value: itemReplyButton.interactive.button_reply.title,
             response_id: itemReplyButton.interactive.button_reply.id,
             hashTagStarter: false,
-            contact: contact
           };
         }
       }
