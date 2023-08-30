@@ -84,18 +84,18 @@ export class Form implements iForm {
         this.started_at = Date.now().toString();
         this.replies = replies
         this.status = "Started"
-        this.progress = 0
+        this.progress = -1
         this.collection_name = "CONVERSATION"
     }
 
     processNewConversationResponse( response: Nano.DocumentInsertResponse){
-      
       if( response.ok){
         this._id = response.id;
         this._rev = response.rev;
       }
-      
     }
+
+    
 
     static populateConversation( response: Conversation){
         const newData = new Conversation('',[]);

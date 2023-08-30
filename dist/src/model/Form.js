@@ -30,7 +30,7 @@ class Conversation {
         this.started_at = Date.now().toString();
         this.replies = replies;
         this.status = "Started";
-        this.progress = 0;
+        this.progress = -1;
         this.collection_name = "CONVERSATION";
     }
     processNewConversationResponse(response) {

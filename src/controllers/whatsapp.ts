@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import * as Nano from "nano";
 import { sendMessage } from "../services/whatsappService";
-import { Conversation, Form, iQuestionElement } from "../model/Form";
+import { Conversation, Form, iQuestionElement, iReplyElement } from "../model/Form";
 
 
 let nano = Nano.default(
@@ -133,6 +133,17 @@ async function getWelcomeMessage(){
   }
 }
 
+async function updateConversation( data: Conversation ){
+      try {
+        const db = nano.use(process.env.COUCHDB_NAME!);
+        const response = await db.insert(data);
+        data.processNewConversationResponse(response);
+      }
+      catch(e){
+        return undefined
+      }
+}
+
 async function checkActiveConversation (phoneNumber: string) {
   
   if( !phoneNumber) 
@@ -161,33 +172,62 @@ export async function ReceiveMessage(req: any, res: Response) {
       const conversationId = await checkActiveConversation(messageInfo.phone_number);
 
       if( messageInfo.type == 'text' && !messageInfo.hashTagStarter ){
-        console.log("User: ",messageInfo.value);
+        // console.log("User: ",messageInfo.value);
         
         if( conversationId ){
           // here save the response message and increment progress flag on conversation document
-
-          /// Since user has started a Conversation, bot sends question
           const conversationDoc = await getCreateConversation( conversationId );
-          console.log("Bot: ",conversationDoc?.replies[conversationDoc.progress].question_title);
+            if( conversationDoc ){
+              /// updates the Reply element of an reply array
+              conversationDoc.progress = conversationDoc.progress + 1;              
+
+              const replyUpdate: iReplyElement = {
+                order: conversationDoc.progress,
+                question_title: '',
+                type: 'free',
+                reply: {
+                  text: messageInfo.value ? messageInfo.value : '',
+                  id: ''
+                }
+              }
+              const replsNew = conversationDoc.replies.map( (i:any)=>(
+                  i.order != replyUpdate.order ?{...i} :  {...i, reply: replyUpdate.reply }
+              ))
+              
+              conversationDoc.replies = replsNew;
+              updateConversation(conversationDoc);
+
+              if ( conversationDoc.replies.length > (conversationDoc.progress + 1) )
+              {
+                sendMessage(conversationDoc.replies[conversationDoc.progress + 1].question_title)
+                // console.log("Bot: ",conversationDoc.replies[conversationDoc.progress + 1].question_title);
+              } else {
+                // console.log("Bot: El formulario ha terminado, muchas gracias por tus respuestas! Hasta luego");
+                sendMessage("El formulario ha terminado, muchas gracias por tus respuestas! Hasta luego");
+              }
+              
+              
+            } 
+           
         }
         else {
           // User send a message to the bot, but hast not started a conversation
           const welcomeMsg = await getWelcomeMessage();
-          console.log("Bot: ",welcomeMsg);
+          // console.log("Bot: ",welcomeMsg);
+          sendMessage(welcomeMsg)
         }
       }
-
 
       if( messageInfo.hashTagStarter && !conversationId ){
         // When user enter #, searchs for a conversation, if does not exist it creates it.
         // returns undefined when #form does not exist
         const newConversationId = `${messageInfo.value?.slice(1)}|${messageInfo.phone_number}`;
-        console.log(newConversationId);
+        
         const conversationDoc = await getCreateConversation( newConversationId ) ;
         if( conversationDoc){
-          console.log("User:" , messageInfo.value);
-          console.log("Bot:",  conversationDoc?.replies[conversationDoc.progress].question_title );
-          
+          // console.log("User:" , messageInfo.value);
+          // console.log("Bot:", conversationDoc.replies[conversationDoc.progress+1].question_title)
+          sendMessage(conversationDoc.replies[conversationDoc.progress+1].question_title)
         }
 
       }
