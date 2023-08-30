@@ -9,4 +9,3 @@ const whatsapp_1 = require("../controllers/whatsapp");
 exports.whatsAppRouter = express_1.default.Router();
 exports.whatsAppRouter.get('/whatsapp', whatsapp_1.VerifiedToken);
 exports.whatsAppRouter.post('/whatsapp', whatsapp_1.ReceiveMessage);
-exports.whatsAppRouter.post('/send-text-message', whatsapp_1.SendTextMessage);

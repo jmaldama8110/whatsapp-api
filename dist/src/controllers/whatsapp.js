@@ -32,7 +32,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.SendTextMessage = exports.ReceiveMessage = exports.VerifiedToken = void 0;
+exports.ReceiveMessage = exports.VerifiedToken = void 0;
 const Nano = __importStar(require("nano"));
 const whatsappService_1 = require("../services/whatsappService");
 const Form_1 = require("../model/Form");
@@ -206,12 +206,12 @@ function ReceiveMessage(req, res) {
                             conversationDoc.replies = replsNew;
                             updateConversation(conversationDoc);
                             if (conversationDoc.replies.length > (conversationDoc.progress + 1)) {
-                                (0, whatsappService_1.sendMessage)(conversationDoc.replies[conversationDoc.progress + 1].question_title);
+                                (0, whatsappService_1.sendMessage)(conversationDoc.replies[conversationDoc.progress + 1].question_title, messageInfo.phone_number);
                                 // console.log("Bot: ",conversationDoc.replies[conversationDoc.progress + 1].question_title);
                             }
                             else {
                                 // console.log("Bot: El formulario ha terminado, muchas gracias por tus respuestas! Hasta luego");
-                                (0, whatsappService_1.sendMessage)("El formulario ha terminado, muchas gracias por tus respuestas! Hasta luego");
+                                (0, whatsappService_1.sendMessage)("El formulario ha terminado, muchas gracias por tus respuestas! Hasta luego", messageInfo.phone_number);
                             }
                         }
                     }
@@ -219,7 +219,7 @@ function ReceiveMessage(req, res) {
                         // User send a message to the bot, but hast not started a conversation
                         const welcomeMsg = yield getWelcomeMessage();
                         // console.log("Bot: ",welcomeMsg);
-                        (0, whatsappService_1.sendMessage)(welcomeMsg);
+                        (0, whatsappService_1.sendMessage)(welcomeMsg, messageInfo.phone_number);
                     }
                 }
                 if (messageInfo.hashTagStarter && !conversationId) {
@@ -230,7 +230,7 @@ function ReceiveMessage(req, res) {
                     if (conversationDoc) {
                         // console.log("User:" , messageInfo.value);
                         // console.log("Bot:", conversationDoc.replies[conversationDoc.progress+1].question_title)
-                        (0, whatsappService_1.sendMessage)(conversationDoc.replies[conversationDoc.progress + 1].question_title);
+                        (0, whatsappService_1.sendMessage)(conversationDoc.replies[conversationDoc.progress + 1].question_title, messageInfo.phone_number);
                     }
                 }
             }
@@ -243,16 +243,3 @@ function ReceiveMessage(req, res) {
     });
 }
 exports.ReceiveMessage = ReceiveMessage;
-function SendTextMessage(req, res) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            yield (0, whatsappService_1.sendMessage)(req.body.text);
-            res.send("Ok");
-        }
-        catch (e) {
-            console.log(e);
-            res.status(400).send(e);
-        }
-    });
-}
-exports.SendTextMessage = SendTextMessage;
