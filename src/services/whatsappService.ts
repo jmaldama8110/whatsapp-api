@@ -2,7 +2,7 @@
 import axios from "axios";
 
 
-export async function sendMessage( textMsg: string){
+export async function sendMessage( textMsg: string ){
 
     const waApiVersion = process.env.WHATSAPP_API_VERSION;
     const waPhoneNumberId = process.env.WHATSAPP_API_PHONE_NUMBER_ID;

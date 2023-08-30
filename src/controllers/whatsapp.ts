@@ -45,6 +45,7 @@ function getMessageInfo(reqBody: any): iMessageBodyFromUser | undefined {
 
     if (messageResp.length > 0) {
       const itemWithMsg = messageResp.find((i: any) => i.type == "text");
+      console.log(entry[0]);
       if (itemWithMsg)
         return {
           profile_name: contact.profile.name,
@@ -169,6 +170,7 @@ export async function ReceiveMessage(req: any, res: Response) {
 
     if (!!messageInfo) {
       
+      
       const conversationId = await checkActiveConversation(messageInfo.phone_number);
 
       if( messageInfo.type == 'text' && !messageInfo.hashTagStarter ){
@@ -199,7 +201,7 @@ export async function ReceiveMessage(req: any, res: Response) {
 
               if ( conversationDoc.replies.length > (conversationDoc.progress + 1) )
               {
-                sendMessage(conversationDoc.replies[conversationDoc.progress + 1].question_title)
+                sendMessage(conversationDoc.replies[conversationDoc.progress + 1].question_title, )
                 // console.log("Bot: ",conversationDoc.replies[conversationDoc.progress + 1].question_title);
               } else {
                 // console.log("Bot: El formulario ha terminado, muchas gracias por tus respuestas! Hasta luego");
